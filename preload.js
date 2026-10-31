@@ -2,6 +2,11 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('oscAPI', {
   sendOSC: (payload) => ipcRenderer.send('osc:send', payload),
+  configureRX: (opts) => ipcRenderer.invoke('osc:configure-rx', opts),
+  onOSCRX: (callback) => {
+    ipcRenderer.removeAllListeners('osc:rx');
+    ipcRenderer.on('osc:rx', (_event, packets) => callback(packets));
+  },
   loadConfig: () => ipcRenderer.invoke('config:load'),
   saveConfig: (data) => ipcRenderer.invoke('config:save', data),
   exportConfig: (jsonStr) => ipcRenderer.invoke('config:export', jsonStr),

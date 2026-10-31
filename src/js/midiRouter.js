@@ -3,10 +3,25 @@ import { state, getActiveScene, getRuntime } from './state.js';
 import { sendOscRaw, flashTxMonitor } from './network.js';
 import { hwMidi } from './webMidi.js';
 
-export function computeScaledInt(widget, norm = widget.normValue) {
-  const raw = widget.min + norm * (widget.max - widget.min);
-  const limit = widget.msgType === 'pitch' ? 16383 : 127;
-  return Math.max(0, Math.min(limit, Math.round(raw)));
+export function computeScaledFloat(widget, norm = widget.normValue || 0) {
+  const min = Number(widget.min);
+  const max = Number(widget.max);
+  // Si el widget conservó el 0–127 de MIDI pero está en modo OSC Float, usar escala 0.0–1.0 estándar
+  if (min === 0 && max === 127) {
+    return Number(norm.toFixed(4));
+  }
+  const raw = min + norm * (max - min);
+  return Number(raw.toFixed(4));
+}
+
+// Asegura que REAPER reciba el prefijo 'n/' (normalized float) en rutas continuas estándar
+export function normalizeReaperOscAddress(rawAddress, oscType = 'f') {
+  const clean = (rawAddress || '/track/1/volume').trim();
+  if (oscType !== 'f') return clean;
+  if (/^\/(track\/\d+\/(volume|pan|width|send\/\d+\/(volume|pan))|master\/(volume|pan)|fxparam\/\d+\/value)$/i.test(clean)) {
+    return `n${clean}`;
+  }
+  return clean;
 }
 
 export function formatWidgetReadout(widget) {
@@ -15,7 +30,7 @@ export function formatWidgetReadout(widget) {
     return `${midiNoteToName(widget.midiNum)}:${isOn ? Math.max(1, widget.max || 100) : 0}`;
   }
   if (widget.msgType === 'osc' && widget.oscType === 'f') {
-    return (widget.normValue || 0).toFixed(2);
+    return computeScaledFloat(widget).toFixed(2);
   }
   const v = computeScaledInt(widget);
   if (widget.msgType === 'note' && widget.noteBehavior === 'sweep') {
