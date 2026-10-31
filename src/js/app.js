@@ -146,12 +146,16 @@ function handleIncomingOscPackets(packets) {
     const rawVal = Number(pkt.args[0]);
     if (Number.isNaN(rawVal)) continue;
 
+    const incomingClean = pkt.address.replace(/^n\//, '/');
+
     getActiveScene().pages.forEach((p) => {
       p.widgets.forEach((w) => {
-        if (w.msgType !== 'osc' || w.oscAddress !== pkt.address) return;
+        if (w.msgType !== 'osc') return;
+        const widgetClean = (w.oscAddress || '').trim().replace(/^n\//, '/');
+        if (widgetClean !== incomingClean) return;
         if (isWidgetBeingTouched(w.id)) return;
 
-        if (w.oscType === 'i') {
+        if (w.oscType === 'i' || !(Number(w.min) === 0 && Number(w.max) === 127)) {
           const span = (w.max - w.min) || 1;
           w.normValue = Math.max(0, Math.min(1, (rawVal - w.min) / span));
         } else {

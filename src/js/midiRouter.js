@@ -3,6 +3,14 @@ import { state, getActiveScene, getRuntime } from './state.js';
 import { sendOscRaw, flashTxMonitor } from './network.js';
 import { hwMidi } from './webMidi.js';
 
+export function computeScaledInt(widget, norm = widget.normValue) {
+  const raw = widget.min + norm * (widget.max - widget.min);
+  const limit = widget.msgType === 'pitch' ? 16383 : 127;
+  return Math.max(0, Math.min(limit, Math.round(raw)));
+}
+
+// Reemplaza formatWidgetReadout y el bloque else if (widget.msgType === 'osc') en src/js/midiRouter.js:
+
 export function computeScaledFloat(widget, norm = widget.normValue || 0) {
   const min = Number(widget.min);
   const max = Number(widget.max);
@@ -156,17 +164,17 @@ export function dispatchWidgetMessage(widget, phase = 'move') {
       if (!useUdp) flashTxMonitor(`MIDI ${label}`);
     }
   } else if (widget.msgType === 'osc') {
-    // Las rutas OSC nativas (/track/1/volume, etc.) siempre viajan por el motor OSC UDP
-    const addr = widget.oscAddress || '/track/1/mute';
+    const rawAddr = widget.oscAddress || '/track/1/volume';
     if (widget.oscType === 'i') {
       if (!forceSend && rt.lastSent === valInt) return;
       rt.lastSent = valInt;
-      sendOscRaw(addr, [{ type: 'i', value: valInt }], `${addr} → ${valInt}`);
+      sendOscRaw(rawAddr, [{ type: 'i', value: valInt }], `${rawAddr} → ${valInt}`);
     } else {
-      const fVal = Number(widget.normValue.toFixed(3));
+      const addr = normalizeReaperOscAddress(rawAddr, 'f');
+      const fVal = computeScaledFloat(widget);
       if (!forceSend && rt.lastSent === fVal) return;
       rt.lastSent = fVal;
-      sendOscRaw(addr, [{ type: 'f', value: fVal }], `${addr} → ${fVal}`);
+      sendOscRaw(addr, [{ type: 'f', value: fVal }], `${addr} → ${fVal.toFixed(2)}`);
     }
   }
 }

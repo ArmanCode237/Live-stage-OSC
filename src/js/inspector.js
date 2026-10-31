@@ -294,12 +294,17 @@ export function bindInspectorInputs(widgetCallbacks, onFullRender) {
     scheduleSave();
   };
 
-  $('inp-msg-type').onchange = (e) => {
+$('inp-msg-type').onchange = (e) => {
     const w = getSelectedWidget();
     if (!w) return;
     w.msgType = e.target.value;
-    if (w.msgType === 'pitch') { w.min = 0; w.max = 16383; w.normValue = 0.5; }
-    else if (w.max > 127) { w.min = 0; w.max = 127; }
+    if (w.msgType === 'pitch') {
+      w.min = 0; w.max = 16383; w.normValue = 0.5;
+    } else if (w.msgType === 'osc' && w.oscType === 'f') {
+      w.min = 0; w.max = 1;
+    } else if (w.max > 127 || (w.min === 0 && w.max === 1)) {
+      w.min = 0; w.max = 127;
+    }
     updateWidgetVisuals(w);
     openInspector(w);
     scheduleSave();
@@ -347,11 +352,17 @@ export function bindInspectorInputs(widgetCallbacks, onFullRender) {
     scheduleSave();
   };
 
-  $('inp-osc-type').onchange = (e) => {
+$('inp-osc-type').onchange = (e) => {
     const w = getSelectedWidget();
     if (!w) return;
     w.oscType = e.target.value;
+    if (w.oscType === 'f' && w.min === 0 && w.max === 127) {
+      w.min = 0; w.max = 1;
+    } else if (w.oscType === 'i' && w.min === 0 && w.max === 1) {
+      w.min = 0; w.max = 127;
+    }
     updateWidgetVisuals(w);
+    openInspector(w);
     scheduleSave();
   };
 

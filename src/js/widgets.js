@@ -376,8 +376,7 @@ function attachWidgetPointerEvents(el, widget, callbacks) {
     state.activePointers.set(e.pointerId, session);
 
     if (widget.type === 'fader' && trackRect) {
-      widget.normValue = Math.max(0, Math.min(1, 1 - (e.clientY - trackRect.top) / trackRect.height));
-      updateWidgetVisuals(widget, el);
+      // No saltar de golpe a la coordenada Y del toque; conservar posición actual y arrastrar suavemente
       dispatchWidgetMessage(widget, 'down');
     } else if (widget.type === 'toggle') {
       widget.normValue = widget.normValue > 0.5 ? 0 : 1;
@@ -424,7 +423,9 @@ function attachWidgetPointerEvents(el, widget, callbacks) {
       callbacks.onGeometryChange?.(widget);
     } else if (session.mode === 'live') {
       if (widget.type === 'fader' && session.trackRect) {
-        widget.normValue = Math.max(0, Math.min(1, 1 - (e.clientY - session.trackRect.top) / session.trackRect.height));
+        const deltaY = session.startY - e.clientY;
+        const height = Math.max(40, session.trackRect.height);
+        widget.normValue = Math.max(0, Math.min(1, session.startNorm + deltaY / height));
       } else if (widget.type === 'knob') {
         const deltaY = session.startY - e.clientY;
         const throwScale = Math.max(0.65, Math.min(1.35, zoom));
